@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>Home Electricity Consumption & Saving tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+/* ════════ TOKENS ════════ */
+:root{
+  /* Base */
+  --bg:#07090d; --s1:#0e1117; --s2:#151b25; --s3:#1c2432;
+  --border:rgba(255,255,255,.06); --border2:rgba(255,255,255,.11);
+  /* Palette */
+  --lime:#d4f722; --lime2:#b5d414; --lime-a:rgba(212,247,34,.1);
+  --lime-b:rgba(212,247,34,.06); --lime-c:rgba(212,247,34,.03);
+  --cyan:#22d3ee; --cyan-a:rgba(34,211,238,.1);
+  --rose:#fb7185; --rose-a:rgba(251,113,133,.1);
+  --amber:#fbbf24; --amber-a:rgba(251,191,36,.1);
+  --purple:#c084fc; --purple-a:rgba(192,132,252,.1);
+  --blue:#60a5fa; --blue-a:rgba(96,165,250,.1);
+  --green:#4ade80; --green-a:rgba(74,222,128,.1);
+  --text:#eef2f8; --text2:#8b95a6; --text3:#3d4758;
+  /* Type */
+  --mono:'Space Mono',monospace; --sans:'Outfit',sans-serif;
+  /* Shape */
+  --r:12px; --r-sm:8px; --r-lg:18px; --r-xl:24px;
+  /* Transitions */
+  --ease:cubic-bezier(.4,0,.2,1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;height:100%}
+body{
+  font-family:var(--sans);background:var(--bg);color:var(--text);
+  min-height:100%;overflow-x:hidden;
+  background-image:
+    radial-gradient(ellipse 70% 50% at 85% 5%,rgba(212,247,34,.04) 0%,transparent 55%),
+    radial-gradient(ellipse 50% 40% at 5% 90%,rgba(34,211,238,.03) 0%,transparent 55%);
+}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--s3);border-radius:2px}
+img{display:block;max-width:100%}
+
+/* ════════ MOBILE NAV (bottom) ════════ */
+.mob-nav{
+  display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;
+  background:rgba(14,17,23,.95);backdrop-filter:blur(20px);
+  border-top:1px solid var(--border);
+  padding:8px 0 max(8px,env(safe-area-inset-bottom));
+  grid-template-columns:repeat(7,1fr);
+}
+.mob-nav-btn{
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:6px 4px;border:none;background:none;color:var(--text3);
+  cursor:pointer;font-family:var(--sans);font-size:9px;font-weight:500;
+  transition:color .18s var(--ease);text-transform:uppercase;letter-spacing:.3px;
+}
+.mob-nav-btn i{font-size:20px}
+.mob-nav-btn.active{color:var(--lime)}
+
+/* ════════ DESKTOP LAYOUT ════════ */
+.shell{display:flex;min-height:100vh}
+
+/* ════════ SIDEBAR ════════ */
+.sidebar{
+  width:260px;flex-shrink:0;background:var(--s1);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  position:fixed;top:0;left:0;height:100vh;z-index:100;
+  overflow:hidden;
+}
+.sidebar-top{padding:28px 20px 20px;border-bottom:1px solid var(--border)}
+.brand{display:flex;align-items:center;gap:12px;margin-bottom:4px}
+.brand-icon{
+  width:40px;height:40px;border-radius:10px;
+  background:var(--lime);display:flex;align-items:center;justify-content:center;
+  font-size:20px;flex-shrink:0;box-shadow:0 0 20px rgba(212,247,34,.3);
+}
+.brand-name{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--lime);letter-spacing:-1px}
+.brand-sub{font-size:11px;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;padding-left:52px}
+.nav-list{padding:14px 10px;flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:2px}
+.nav-sep{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;padding:12px 10px 4px}
+.nav-btn{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r-sm);
+  font-size:13.5px;font-family:var(--sans);color:var(--text2);cursor:pointer;
+  transition:all .18s var(--ease);border:none;background:none;width:100%;text-align:left;
+  position:relative;font-weight:500;
+}
+.nav-btn i{font-size:18px;flex-shrink:0}
+.nav-btn:hover{background:rgba(255,255,255,.04);color:var(--text)}
+.nav-btn.active{background:var(--lime-b);color:var(--lime);border:1px solid rgba(212,247,34,.15)}
+.nav-btn.active::before{content:'';position:absolute;right:-1px;top:20%;bottom:20%;width:2px;background:var(--lime);border-radius:2px 0 0 2px}
+.nav-pill{margin-left:auto;font-family:var(--mono);font-size:9px;background:var(--lime-a);color:var(--lime);padding:2px 7px;border-radius:20px;font-weight:700}
+.sidebar-bottom{padding:16px 20px;border-top:1px solid var(--border)}
+.rate-wrapper{background:var(--s2);border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden}
+.rate-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;padding:8px 12px 4px}
+.rate-row{display:flex;align-items:center}
+.rate-sym{padding:6px 10px;font-family:var(--mono);font-size:16px;color:var(--lime);font-weight:700}
+.rate-inp{
+  flex:1;background:none;border:none;color:var(--text);font-family:var(--mono);
+  font-size:16px;padding:6px 0;outline:none;
+}
+.rate-unit{padding:6px 10px;font-size:11px;color:var(--text3)}
+
+/* ════════ MAIN ════════ */
+.main{flex:1;margin-left:260px;display:flex;flex-direction:column;min-height:100vh}
+.topbar{
+  position:sticky;top:0;z-index:50;
+  background:rgba(7,9,13,.85);backdrop-filter:blur(18px);
+  border-bottom:1px solid var(--border);
+  padding:14px 28px;display:flex;align-items:center;justify-content:space-between;
+  gap:12px;
+}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.hamburger{display:none;background:none;border:none;color:var(--text2);cursor:pointer;padding:6px;font-size:22px;border-radius:var(--r-sm)}
+.hamburger:hover{background:var(--s2);color:var(--text)}
+.page-name{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--text)}
+.topbar-right{display:flex;gap:8px;align-items:center;flex-shrink:0}
+
+/* ════════ BUTTONS ════════ */
+.btn{
+  display:inline-flex;align-items:center;gap:6px;padding:9px 16px;
+  border-radius:var(--r-sm);font-size:13px;font-weight:600;font-family:var(--sans);
+  border:1px solid var(--border2);background:var(--s2);color:var(--text);
+  cursor:pointer;transition:all .16s var(--ease);white-space:nowrap;
+}
+.btn:hover{background:var(--s3);border-color:rgba(255,255,255,.18)}
+.btn-lime{background:var(--lime);border-color:var(--lime);color:#07090d;font-weight:700}
+.btn-lime:hover{background:var(--lime2);border-color:var(--lime2);transform:translateY(-1px);box-shadow:0 4px 16px rgba(212,247,34,.25)}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn-ghost{background:none;border-color:transparent}
+.btn-ghost:hover{background:var(--s2);border-color:var(--border)}
+.ico-btn{background:none;border:none;color:var(--text3);cursor:pointer;padding:6px;border-radius:var(--r-sm);font-size:17px;transition:all .14s var(--ease)}
+.ico-btn:hover{background:var(--rose-a);color:var(--rose)}
+
+/* ════════ PAGE CONTENT ════════ */
+.content{padding:24px 28px;flex:1}
+.page{display:none;animation:pgIn .25s var(--ease)}
+.page.active{display:block}
+@keyframes pgIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* ════════ METRIC CARDS ════════ */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.metric{
+  background:var(--s1);border:1px solid var(--border);border-radius:var(--r-lg);
+  padding:20px;position:relative;overflow:hidden;transition:border-color .2s var(--ease),transform .2s var(--ease);
+  cursor:default;
+}
+.metric:hover{border-color:var(--border2);transform:translateY(-2px)}
+.metric-shine{
+  position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--mc,var(--lime)),transparent);
+  opacity:.6;
+}
+.metric-glow{
+  position:absolute;top:-30px;right:-30px;width:100px;height:100px;
+  border-radius:50%;background:var(--mc,var(--lime));opacity:.04;filter:blur(20px);
+}
+.metric-ico{
+  width:38px;height:38px;border-radius:10px;margin-bottom:14px;
+  background:var(--mc-a,var(--lime-a));border:1px solid rgba(255,255,255,.06);
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;color:var(--mc,var(--lime));
+}
+.metric-lbl{font-size:10.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;font-weight:600}
+.metric-val{font-family:var(--mono);font-size:26px;font-weight:700;line-height:1;color:var(--text)}
+.metric-unit{font-size:13px;font-weight:400;color:var(--text2);font-family:var(--sans)}
+.metric-sub{font-size:11px;color:var(--text3);margin-top:8px}
+
+/* ════════ CARD ════════ */
+.card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r-lg);padding:22px;margin-bottom:18px}
+.card-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:12px}
+.card-title{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px}
+
+/* ════════ GRID LAYOUTS ════════ */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.three-col{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+
+/* ════════ FORMS ════════ */
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;align-items:end}
+.fg{display:flex;flex-direction:column;gap:6px}
+.fg label{font-size:11.5px;color:var(--text2);font-weight:600;letter-spacing:.3px}
+.fi{
+  background:var(--s2);border:1px solid var(--border);border-radius:var(--r-sm);
+  color:var(--text);font-size:14px;padding:10px 13px;font-family:var(--sans);
+  outline:none;transition:border-color .15s var(--ease),box-shadow .15s var(--ease);width:100%;
+}
+.fi:focus{border-color:var(--lime);box-shadow:0 0 0 3px rgba(212,247,34,.08)}
+.fi::placeholder{color:var(--text3)}
+select.fi option{background:var(--s2)}
+
+/* ════════ DEVICE LIST ════════ */
+.dev-list{display:flex;flex-direction:column;gap:8px}
+.dev-row{
+  display:grid;grid-template-columns:44px 1fr auto auto auto;align-items:center;
+  gap:14px;padding:13px 16px;background:var(--s2);border-radius:var(--r);
+  border:1px solid var(--border);transition:all .18s var(--ease);
+}
+.dev-row:hover{border-color:var(--border2);background:var(--s3)}
+.dev-ico{
+  width:40px;height:40px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:19px;flex-shrink:0;
+}
+.dev-name{font-size:14px;font-weight:600}
+.dev-meta{font-size:11.5px;color:var(--text3);margin-top:2px}
+.dev-kwh{font-family:var(--mono);font-size:13px;font-weight:700;text-align:right}
+.dev-cost{font-size:11px;color:var(--text3);text-align:right;margin-top:2px}
+.dev-pct{font-size:11px;color:var(--text3);text-align:right;min-width:38px}
+
+/* ════════ PROGRESS ════════ */
+.prog-wrap{height:4px;background:var(--s3);border-radius:2px;overflow:hidden;margin:8px 0}
+.prog-bar{height:100%;border-radius:2px;transition:width .8s var(--ease)}
+.prog-wrap.tall{height:8px;border-radius:4px}
+.prog-bar.tall{border-radius:4px}
+
+/* ════════ BADGES ════════ */
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:20px;font-family:var(--mono)}
+.bg-lime{background:var(--lime-a);color:var(--lime)}
+.bg-green{background:var(--green-a);color:var(--green)}
+.bg-amber{background:var(--amber-a);color:var(--amber)}
+.bg-rose{background:var(--rose-a);color:var(--rose)}
+.bg-cyan{background:var(--cyan-a);color:var(--cyan)}
+.bg-blue{background:var(--blue-a);color:var(--blue)}
+.bg-purple{background:var(--purple-a);color:var(--purple)}
+
+/* ════════ ALERT ════════ */
+.alert{padding:12px 16px;border-radius:var(--r-sm);font-size:13px;margin-bottom:18px;display:flex;align-items:flex-start;gap:10px;line-height:1.55}
+.alert i{margin-top:1px;flex-shrink:0;font-size:16px}
+.al-amber{background:var(--amber-a);border:1px solid rgba(251,191,36,.25);color:var(--amber)}
+.al-green{background:var(--green-a);border:1px solid rgba(74,222,128,.25);color:var(--green)}
+.al-rose{background:var(--rose-a);border:1px solid rgba(251,113,133,.25);color:var(--rose)}
+.al-lime{background:var(--lime-a);border:1px solid rgba(212,247,34,.25);color:var(--lime)}
+
+/* ════════ TIPS ════════ */
+.tip-row{
+  display:flex;gap:14px;align-items:flex-start;padding:15px 16px;
+  background:var(--s2);border-radius:var(--r);border:1px solid var(--border);
+  margin-bottom:10px;transition:all .18s var(--ease);
+}
+.tip-row:hover{border-color:var(--border2)}
+.tip-row.done{opacity:.35}
+.tip-ico{
+  width:42px;height:42px;border-radius:10px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:20px;
+  background:var(--lime-b);border:1px solid rgba(212,247,34,.12);
+}
+.tip-body{flex:1;min-width:0}
+.tip-title{font-size:14px;font-weight:600;margin-bottom:3px}
+.tip-row.done .tip-title{text-decoration:line-through;color:var(--text3)}
+.tip-desc{font-size:12px;color:var(--text2);line-height:1.6}
+.tip-foot{display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap}
+
+/* ════════ LOG TABLE ════════ */
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{text-align:left;padding:8px 12px;color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.8px;border-bottom:1px solid var(--border);font-weight:700}
+.tbl td{padding:12px 12px;border-bottom:1px solid var(--border)}
+.tbl tbody tr:last-child td{border-bottom:none}
+.tbl tbody tr:hover td{background:rgba(255,255,255,.02)}
+.t-up{color:var(--rose)}.t-dn{color:var(--green)}
+
+/* ════════ FORECAST ════════ */
+.fc-card{
+  background:var(--s2);border:1px solid var(--border);border-radius:var(--r);
+  padding:18px;text-align:center;transition:all .18s var(--ease);
+}
+.fc-card:hover{border-color:rgba(212,247,34,.3);transform:translateY(-3px)}
+.fc-mo{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;font-weight:700}
+.fc-kwh{font-family:var(--mono);font-size:28px;font-weight:700;color:var(--lime)}
+.fc-bill{font-size:12px;color:var(--text2);margin-top:5px}
+
+/* ════════ EMPTY ════════ */
+.empty{text-align:center;padding:50px 20px;color:var(--text3)}
+.empty i{font-size:44px;margin-bottom:14px;display:block;opacity:.25}
+.empty p{font-size:14px;line-height:1.6}
+
+/* ════════════════════════════════
+   CHAT
+════════════════════════════════ */
+.chat-page{display:grid;grid-template-columns:1fr 300px;gap:18px;height:calc(100vh - 124px)}
+
+/* Main chat window */
+.chat-win{
+  background:var(--s1);border:1px solid var(--border);border-radius:var(--r-xl);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+
+/* Chat header */
+.chat-hdr{
+  padding:16px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:14px;
+  background:linear-gradient(90deg,var(--lime-b),transparent);
+  flex-shrink:0;
+}
+.bot-ava{
+  width:46px;height:46px;border-radius:14px;flex-shrink:0;
+  background:var(--lime);display:flex;align-items:center;justify-content:center;
+  font-size:24px;position:relative;box-shadow:0 0 24px rgba(212,247,34,.3);
+}
+.bot-status{
+  position:absolute;bottom:-3px;right:-3px;width:13px;height:13px;
+  border-radius:50%;background:var(--green);border:2px solid var(--s1);
+  animation:statusPulse 2.5s ease infinite;
+}
+@keyframes statusPulse{0%,100%{box-shadow:0 0 0 0 rgba(74,222,128,.6)}70%{box-shadow:0 0 0 6px transparent}}
+.bot-name{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--lime)}
+.bot-tag{font-size:11px;color:var(--text3);margin-top:2px}
+.ai-badge{
+  margin-left:auto;display:flex;align-items:center;gap:7px;
+  background:var(--s2);border:1px solid var(--border);border-radius:30px;
+  padding:6px 14px;font-size:11px;color:var(--lime);font-weight:700;font-family:var(--mono);
+}
+.ai-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:statusPulse 2.5s ease infinite}
+
+/* Messages */
+.chat-msgs{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:14px;scroll-behavior:smooth}
+.msg{display:flex;gap:10px;max-width:90%}
+.msg.user{align-self:flex-end;flex-direction:row-reverse;max-width:78%}
+.msg-ava{
+  width:34px;height:34px;border-radius:10px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:16px;
+}
+.msg.bot .msg-ava{background:var(--lime-b);border:1px solid rgba(212,247,34,.2);color:var(--lime);font-size:18px}
+.msg.user .msg-ava{background:var(--s3);color:var(--text2)}
+.msg-bubble{
+  padding:12px 16px;border-radius:16px;font-size:13.5px;line-height:1.7;
+  word-break:break-word;
+}
+.msg.bot .msg-bubble{
+  background:var(--s2);border:1px solid var(--border);
+  border-bottom-left-radius:4px;
+}
+.msg.user .msg-bubble{
+  background:linear-gradient(135deg,#141f07,#1c2e0b);
+  border:1px solid rgba(212,247,34,.25);color:var(--lime);
+  border-bottom-right-radius:4px;
+}
+.msg-meta{font-size:10px;color:var(--text3);margin-top:5px;padding:0 4px;display:flex;align-items:center;gap:6px}
+.msg.user .msg-meta{justify-content:flex-end}
+
+/* Bot message formatting */
+.msg-bubble strong{font-weight:700;color:var(--lime)}
+.msg.user .msg-bubble strong{color:inherit}
+.msg-bubble em{color:var(--cyan);font-style:normal;font-weight:600}
+.msg-bubble ul{margin:6px 0 6px 18px;display:flex;flex-direction:column;gap:3px;list-style:disc}
+.msg-bubble li{line-height:1.6}
+.data-table{margin:8px 0;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+.data-row{
+  display:grid;grid-template-columns:1fr auto;align-items:center;
+  padding:7px 12px;font-size:12.5px;border-bottom:1px solid var(--border);
+}
+.data-row:last-child{border-bottom:none}
+.data-row:nth-child(even){background:rgba(255,255,255,.02)}
+.data-row .val{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--lime);text-align:right}
+.data-row .lbl{color:var(--text2)}
+.msg-badge{
+  display:inline-flex;align-items:center;gap:4px;margin-top:10px;
+  font-size:10px;padding:3px 9px;border-radius:12px;
+  background:var(--lime-b);color:var(--lime);border:1px solid rgba(212,247,34,.15);
+  font-family:var(--mono);font-weight:700;
+}
+.msg-badge i{font-size:11px}
+
+/* Typing */
+.typing-dots{display:flex;gap:5px;padding:12px 16px;align-items:center}
+.tdot{width:7px;height:7px;border-radius:50%;background:var(--lime);animation:td 1.3s ease infinite;opacity:.3}
+.tdot:nth-child(2){animation-delay:.2s}.tdot:nth-child(3){animation-delay:.4s}
+@keyframes td{0%,80%,100%{opacity:.3;transform:scale(.75)}40%{opacity:1;transform:scale(1)}}
+
+/* Quick chips */
+.chips-area{
+  padding:10px 16px;border-top:1px solid var(--border);
+  display:flex;flex-wrap:wrap;gap:6px;flex-shrink:0;
+}
+.chip{
+  font-size:11.5px;padding:6px 12px;border-radius:20px;
+  background:var(--s2);border:1px solid var(--border2);color:var(--text2);
+  cursor:pointer;transition:all .16s var(--ease);font-family:var(--sans);font-weight:500;
+}
+.chip:hover{border-color:rgba(212,247,34,.5);color:var(--lime);background:var(--lime-b);transform:translateY(-1px)}
+.chip:active{transform:translateY(0)}
+
+/* Input bar */
+.chat-bar{
+  padding:12px 16px;border-top:1px solid var(--border);
+  display:flex;gap:8px;align-items:flex-end;flex-shrink:0;
+  background:rgba(14,17,23,.6);
+}
+.chat-ta{
+  flex:1;background:var(--s2);border:1px solid var(--border);border-radius:var(--r);
+  color:var(--text);font-size:14px;padding:11px 15px;font-family:var(--sans);
+  resize:none;min-height:44px;max-height:110px;outline:none;
+  transition:border-color .15s var(--ease),box-shadow .15s var(--ease);line-height:1.5;
+}
+.chat-ta:focus{border-color:var(--lime);box-shadow:0 0 0 3px rgba(212,247,34,.07)}
+.chat-ta::placeholder{color:var(--text3)}
+.send-btn{
+  width:44px;height:44px;border-radius:var(--r);flex-shrink:0;
+  background:var(--lime);border:none;color:#07090d;
+  font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all .15s var(--ease);font-weight:700;
+}
+.send-btn:hover{background:var(--lime2);transform:scale(1.05);box-shadow:0 4px 16px rgba(212,247,34,.3)}
+.send-btn:active{transform:scale(.97)}
+.send-btn:disabled{opacity:.3;cursor:not-allowed;transform:none;box-shadow:none}
+
+/* Right panel */
+.chat-side{display:flex;flex-direction:column;gap:14px;overflow-y:auto}
+.side-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r-lg);padding:18px}
+.side-title{font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.side-title i{color:var(--lime);font-size:15px}
+
+/* Live pulse meter */
+.pulse-meter{
+  background:var(--s2);border:1px solid rgba(212,247,34,.18);border-radius:var(--r);
+  padding:16px;text-align:center;position:relative;overflow:hidden;
+}
+.pulse-meter::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at center top,rgba(212,247,34,.05),transparent 65%)}
+.pm-val{font-family:var(--mono);font-size:36px;font-weight:700;color:var(--lime);line-height:1;position:relative}
+.pm-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-top:6px;font-weight:700}
+.pm-sub{font-size:12px;color:var(--text2);margin-top:8px}
+.pm-bar-wrap{margin-top:12px}
+
+/* Cap list */
+.cap-list{display:flex;flex-direction:column;gap:6px}
+.cap-item{
+  display:flex;align-items:center;gap:9px;padding:8px 10px;
+  background:var(--s2);border:1px solid var(--border);border-radius:8px;
+  font-size:12px;color:var(--text2);
+}
+.cap-item i{font-size:15px;color:var(--lime);flex-shrink:0}
+.cap-dot{width:6px;height:6px;border-radius:50%;margin-left:auto;flex-shrink:0}
+
+/* Suggested questions sidebar */
+.sugg-list{display:flex;flex-direction:column;gap:6px}
+.sugg-item{
+  padding:9px 12px;background:var(--s2);border:1px solid var(--border);
+  border-radius:var(--r-sm);font-size:12px;color:var(--text2);cursor:pointer;
+  transition:all .16s var(--ease);line-height:1.5;
+}
+.sugg-item:hover{border-color:rgba(212,247,34,.3);color:var(--lime);background:var(--lime-c)}
+
+/* ════════ OVERLAY (mobile) ════════ */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99;backdrop-filter:blur(4px)}
+.overlay.show{display:block}
+
+/* ════════════════════════════════
+   RESPONSIVE
+════════════════════════════════ */
+@media(max-width:1100px){
+  .metrics{grid-template-columns:repeat(2,1fr)}
+  .chat-page{grid-template-columns:1fr;height:auto}
+  .chat-side{display:none}
+  .chat-win{height:calc(100vh - 180px)}
+}
+@media(max-width:900px){
+  .two-col{grid-template-columns:1fr}
+  .three-col{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:760px){
+  .sidebar{transform:translateX(-100%);transition:transform .28s var(--ease)}
+  .sidebar.open{transform:translateX(0)}
+  .main{margin-left:0}
+  .topbar{padding:12px 16px}
+  .content{padding:16px}
+  .hamburger{display:flex}
+  .mob-nav{display:grid}
+  .main{padding-bottom:72px}
+  .metrics{grid-template-columns:repeat(2,1fr);gap:10px}
+  .metric{padding:16px}
+  .metric-val{font-size:22px}
+  .three-col{grid-template-columns:1fr 1fr}
+  .dev-row{grid-template-columns:40px 1fr auto auto;gap:10px}
+  .dev-pct{display:none}
+  .chat-win{height:calc(100vh - 200px)}
+  .form-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:520px){
+  .metrics{grid-template-columns:1fr 1fr}
+  .three-col{grid-template-columns:1fr}
+  .topbar-right .btn-ghost{display:none}
+  .form-grid{grid-template-columns:1fr}
+  .fc-grid-resp{grid-template-columns:1fr!important}
+  .chip{font-size:11px;padding:5px 10px}
+  .dev-row{grid-template-columns:36px 1fr auto}
+  .dev-cost,.dev-pct{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- Mobile overlay -->
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+
+<div class="shell">
+
+<!-- ════════════ SIDEBAR ════════════ -->
+<nav class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
+  <div class="sidebar-top">
+    <div class="brand">
+      <div class="brand-icon">⚡</div>
+      <div class="brand-name"></div>
+    </div>
+    <div class="brand-sub">Home Energy Intelligence</div>
+  </div>
+  <div class="nav-list">
+    <div class="nav-sep">Overview</div>
+    <button class="nav-btn active" onclick="go('dash',this)"><i class="ti ti-layout-dashboard"></i>Dashboard</button>
+    <button class="nav-btn" onclick="go('analytics',this)"><i class="ti ti-chart-line"></i>Analytics</button>
+    <button class="nav-btn" onclick="go('forecast',this)"><i class="ti ti-trending-up"></i>Forecast</button>
+    <div class="nav-sep">Manage</div>
+    <button class="nav-btn" onclick="go('devices',this)"><i class="ti ti-plug"></i>Devices</button>
+    <button class="nav-btn" onclick="go('meter',this)"><i class="ti ti-calendar-stats"></i>Meter Log</button>
+    <button class="nav-btn" onclick="go('tips',this)"><i class="ti ti-leaf"></i>Saving Tips</button>
+    <div class="nav-sep">AI</div>
+    <button class="nav-btn" onclick="go('chat',this)">
+      <i class="ti ti-robot"></i>ZAP Assistant
+      <span class="nav-pill">RULE AI</span>
+    </button>
+  </div>
+  <div class="sidebar-bottom">
+    <div class="rate-wrapper">
+      <div class="rate-label">Electricity Rate</div>
+      <div class="rate-row">
+        <span class="rate-sym">₹</span>
+        <input class="rate-inp" id="g-rate" type="number" value="6" min="1" max="25" step="0.5" onchange="onRateChange()" aria-label="Rate per kWh"/>
+        <span class="rate-unit">/kWh</span>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- ════════════ MAIN ════════════ -->
+<div class="main">
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="hamburger" id="ham" onclick="toggleSidebar()" aria-label="Toggle menu"><i class="ti ti-menu-2"></i></button>
+      <div class="page-name" id="pg-name">Dashboard</div>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-sm btn-ghost" onclick="doExport()"><i class="ti ti-download"></i><span class="hide-xs">Export</span></button>
+      <button class="btn btn-sm btn-lime" onclick="go('devices',null)"><i class="ti ti-plus"></i>Add Device</button>
+    </div>
+  </header>
+
+  <div class="content">
+
+    <!-- ───── DASHBOARD ───── -->
+    <div class="page active" id="pg-dash">
+      <div id="d-alert"></div>
+      <div class="metrics" id="d-metrics"></div>
+      <div class="two-col">
+        <div class="card">
+          <div class="card-hdr"><span class="card-title">Usage by category</span></div>
+          <div style="position:relative;height:220px"><canvas id="cat-c" aria-label="Category chart"></canvas></div>
+          <div id="cat-leg" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;font-size:12px;color:var(--text2)"></div>
+        </div>
+        <div class="card">
+          <div class="card-hdr"><span class="card-title">Top consumers</span></div>
+          <div id="top-list"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hdr"><span class="card-title">Monthly goal — 400 kWh</span><span id="goal-badge"></span></div>
+        <div id="goal-sec"></div>
+      </div>
+    </div>
+
+    <!-- ───── ANALYTICS ───── -->
+    <div class="page" id="pg-analytics">
+      <div class="card">
+        <div class="card-hdr"><span class="card-title">Consumption history</span></div>
+        <div style="position:relative;height:250px"><canvas id="hist-c" aria-label="History chart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-hdr"><span class="card-title">Month-over-month comparison</span></div>
+        <div id="mom-tbl"></div>
+      </div>
+    </div>
+
+    <!-- ───── FORECAST ───── -->
+    <div class="page" id="pg-forecast">
+      <div class="alert al-lime"><i class="ti ti-info-circle"></i><span>Forecast uses linear regression on your meter readings. More months = better accuracy.</span></div>
+      <div class="card">
+        <div class="card-hdr"><span class="card-title">Next 3 months projection</span></div>
+        <div class="three-col fc-grid-resp" id="fc-cards"></div>
+      </div>
+      <div class="card">
+        <div class="card-hdr"><span class="card-title">Actual vs projected</span></div>
+        <div style="position:relative;height:250px"><canvas id="fc-c" aria-label="Forecast chart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ───── DEVICES ───── -->
+    <div class="page" id="pg-devices">
+      <div class="card">
+        <div class="card-title" style="margin-bottom:16px">Add new device</div>
+        <div class="form-grid">
+          <div class="fg" style="min-width:180px"><label>Device name</label><input class="fi" id="dn" type="text" placeholder="e.g. Split AC 1.5 Ton"/></div>
+          <div class="fg"><label>Wattage (W)</label><input class="fi" id="dw" type="number" min="1" placeholder="1500"/></div>
+          <div class="fg"><label>Hours / day</label><input class="fi" id="dh" type="number" min="0.1" max="24" step="0.5" placeholder="6"/></div>
+          <div class="fg">
+            <label>Category</label>
+            <select class="fi" id="dc">
+              <option value="cooling">❄️ Cooling / AC</option>
+              <option value="heating">🔥 Heating</option>
+              <option value="kitchen">🍳 Kitchen</option>
+              <option value="lighting">💡 Lighting</option>
+              <option value="entertainment">📺 Entertainment</option>
+              <option value="laundry">🫧 Laundry</option>
+              <option value="water">🚿 Water Heating</option>
+              <option value="other">🔌 Other</option>
+            </select>
+          </div>
+          <div class="fg" style="justify-content:flex-end">
+            <button class="btn btn-lime" onclick="addDev()"><i class="ti ti-plus"></i>Add Device</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hdr"><span class="card-title">Your devices</span><span id="dev-badge"></span></div>
+        <div class="dev-list" id="dev-list"></div>
+      </div>
+    </div>
+
+    <!-- ───── METER LOG ───── -->
+    <div class="page" id="pg-meter">
+      <div class="card">
+        <div class="card-title" style="margin-bottom:16px">Record meter reading</div>
+        <div class="form-grid">
+          <div class="fg"><label>Month</label><input class="fi" id="mm" type="month"/></div>
+          <div class="fg"><label>Units used (kWh)</label><input class="fi" id="mu" type="number" min="0" placeholder="320"/></div>
+          <div class="fg"><label>Bill amount (₹)</label><input class="fi" id="mb" type="number" min="0" placeholder="1920"/></div>
+          <div class="fg" style="justify-content:flex-end">
+            <button class="btn btn-lime" onclick="addLog()"><i class="ti ti-check"></i>Save Reading</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hdr"><span class="card-title">Reading history</span></div>
+        <div id="meter-tbl"></div>
+      </div>
+    </div>
+
+    <!-- ───── TIPS ───── -->
+    <div class="page" id="pg-tips">
+      <div class="card" style="margin-bottom:18px">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px">
+          <div>
+            <div style="font-family:var(--mono);font-size:20px;font-weight:700;margin-bottom:4px">Energy Saving Actions</div>
+            <div style="font-size:13px;color:var(--text2)">Mark each action done — track your green progress</div>
+          </div>
+          <div id="tips-stat"></div>
+        </div>
+      </div>
+      <div id="tips-list"></div>
+    </div>
+
+    <!-- ───── CHAT ───── -->
+    <div class="page" id="pg-chat">
+      <div class="chat-page">
+        <!-- Chat window -->
+        <div class="chat-win">
+          <div class="chat-hdr">
+            <div class="bot-ava">⚡<span class="bot-status"></span></div>
+            <div>
+              <div class="bot-name">ZAP Assistant</div>
+              <div class="bot-tag">Rule-Based AI · Pattern Engine · Offline · Instant</div>
+            </div>
+            <div class="ai-badge"><span class="ai-dot"></span>RULE AI</div>
+            <button class="ico-btn" style="margin-left:8px;color:var(--text3)" onclick="clrChat()" title="Clear chat"><i class="ti ti-trash"></i></button>
+          </div>
+
+          <div class="chat-msgs" id="chat-msgs" role="log" aria-live="polite" aria-label="Chat messages"></div>
+
+          <div class="chips-area" id="chips-area">
+            <button class="chip" onclick="qa('Bill kitna hai is mahine?')">💰 Monthly bill</button>
+            <button class="chip" onclick="qa('Sabse zyada bijli kaun khata hai?')">⚡ Top consumers</button>
+            <button class="chip" onclick="qa('Mujhe saving tips do')">🌱 Saving tips</button>
+            <button class="chip" onclick="qa('AC ka kharcha aur tips batao')">❄️ AC analysis</button>
+            <button class="chip" onclick="qa('MSEDCL slab tariff explain karo')">📋 Tariff guide</button>
+            <button class="chip" onclick="qa('Solar panel lagana chahiye?')">☀️ Solar ROI</button>
+            <button class="chip" onclick="qa('Mera energy score kya hai?')">🏆 My score</button>
+            <button class="chip" onclick="qa('CO2 footprint aur environment impact')">🌿 CO₂ impact</button>
+            <button class="chip" onclick="qa('Smart home upgrades suggest karo')">🏠 Smart home</button>
+          </div>
+
+          <div class="chat-bar">
+            <textarea class="chat-ta" id="chat-in" rows="1"
+              placeholder="Koi bhi sawaal poochho apni bijli ke baare mein…"
+              onkeydown="ck(event)" oninput="ar(this)" aria-label="Chat input"></textarea>
+            <button class="send-btn" id="send-btn" onclick="send()" aria-label="Send message"><i class="ti ti-send"></i></button>
+          </div>
+        </div>
+
+        <!-- Info sidebar -->
+        <div class="chat-side">
+          <!-- Live meter -->
+          <div class="side-card">
+            <div class="side-title"><i class="ti ti-bolt"></i>Live Estimate</div>
+            <div class="pulse-meter">
+              <div class="pm-val" id="pm-val">0</div>
+              <div class="pm-lbl">kWh / month (est.)</div>
+              <div class="pm-sub" id="pm-bill">₹0 estimated</div>
+              <div class="pm-bar-wrap">
+                <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:5px">
+                  <span>0</span><span>Target 400</span>
+                </div>
+                <div class="prog-wrap"><div class="prog-bar" id="pm-bar" style="width:0%;background:var(--lime)"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Capabilities -->
+          <div class="side-card">
+            <div class="side-title"><i class="ti ti-brain"></i>AI Capabilities</div>
+            <div class="cap-list">
+              <div class="cap-item"><i class="ti ti-calculator"></i>Bill & kWh calculations<span class="cap-dot" style="background:var(--green)"></span></div>
+              <div class="cap-item"><i class="ti ti-chart-bar"></i>Top consumer ranking<span class="cap-dot" style="background:var(--green)"></span></div>
+              <div class="cap-item"><i class="ti ti-leaf"></i>Personalized savings<span class="cap-dot" style="background:var(--green)"></span></div>
+              <div class="cap-item"><i class="ti ti-currency-rupee"></i>MSEDCL slab tariff<span class="cap-dot" style="background:var(--green)"></span></div>
+              <div class="cap-item"><i class="ti ti-sun"></i>Solar ROI calculator<span class="cap-dot" style="background:var(--green)"></span></div>
+              <div class="cap-item"><i class="ti ti-leaf"></i>Carbon footprint<span class="cap-dot" style="background:var(--green)"></span></div>
+              <div class="cap-item"><i class="ti ti-device-analytics"></i>Trend analysis<span class="cap-dot" style="background:var(--green)"></span></div>
+              <div class="cap-item"><i class="ti ti-home"></i>Smart home advice<span class="cap-dot" style="background:var(--green)"></span></div>
+              <div class="cap-item"><i class="ti ti-wifi-off"></i>100% offline<span class="cap-dot" style="background:var(--cyan)"></span></div>
+            </div>
+          </div>
+
+          <!-- Suggested questions -->
+          <div class="side-card">
+            <div class="side-title"><i class="ti ti-message-question"></i>Try Asking</div>
+            <div class="sugg-list">
+              <div class="sugg-item" onclick="qa('Bill kitna hai?')">💰 "Bill kitna hai?"</div>
+              <div class="sugg-item" onclick="qa('Geyser ka kharcha batao')">🚿 "Geyser ka kharcha?"</div>
+              <div class="sugg-item" onclick="qa('Last month se comparison karo')">📊 "Last month comparison?"</div>
+              <div class="sugg-item" onclick="qa('Energy grade kya hai mera?')">🏆 "Energy grade kya hai?"</div>
+              <div class="sugg-item" onclick="qa('Solar kitne saal mein payback?')">☀️ "Solar payback period?"</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /shell -->
+
+<!-- Mobile bottom nav -->
+<nav class="mob-nav" role="navigation" aria-label="Mobile navigation">
+  <button class="mob-nav-btn active" id="mob-dash" onclick="go('dash',this)"><i class="ti ti-layout-dashboard"></i>Dash</button>
+  <button class="mob-nav-btn" id="mob-analytics" onclick="go('analytics',this)"><i class="ti ti-chart-line"></i>Stats</button>
+  <button class="mob-nav-btn" id="mob-forecast" onclick="go('forecast',this)"><i class="ti ti-trending-up"></i>Forecast</button>
+  <button class="mob-nav-btn" id="mob-devices" onclick="go('devices',this)"><i class="ti ti-plug"></i>Devices</button>
+  <button class="mob-nav-btn" id="mob-meter" onclick="go('meter',this)"><i class="ti ti-calendar-stats"></i>Meter</button>
+  <button class="mob-nav-btn" id="mob-tips" onclick="go('tips',this)"><i class="ti ti-leaf"></i>Tips</button>
+  <button class="mob-nav-btn" id="mob-chat" onclick="go('chat',this)"><i class="ti ti-robot"></i>AI</button>
+</nav>
+
+<script>
+/* ════ STATE ════ */
+let devs = JSON.parse(localStorage.getItem('zap_devs')||'[]');
+let logs = JSON.parse(localStorage.getItem('zap_logs')||'[]');
+let tips = JSON.parse(localStorage.getItem('zap_tips')||'{}');
+
+const CC={cooling:'#22d3ee',heating:'#f87171',kitchen:'#fbbf24',lighting:'#c084fc',entertainment:'#4ade80',laundry:'#38bdf8',water:'#2dd4bf',other:'#94a3b8'};
+const CI={cooling:'ti-wind',heating:'ti-flame',kitchen:'ti-chef-hat',lighting:'ti-bulb',entertainment:'ti-device-tv',laundry:'ti-wash',water:'ti-droplet',other:'ti-plug'};
+
+const TIPS=[
+  {id:'t1',i:'ti-bulb',   t:'Switch all bulbs to LED',            d:'LEDs use 75% less energy than incandescent, last 25× longer. Immediate ROI — one of the easiest wins.',                         s:8, e:'Easy',  c:'lighting'},
+  {id:'t2',i:'ti-wind',   t:'Set AC thermostat to 24°C',          d:'Each °C lower adds ~6% to your AC bill. 24°C + ceiling fan feels like 21°C at a fraction of the cost.',                         s:15,e:'Easy',  c:'cooling'},
+  {id:'t3',i:'ti-plug-x', t:'Eliminate phantom/standby loads',    d:'TVs, set-top boxes, chargers draw power 24/7 when idle. Smart power strips pay back in weeks.',                                  s:6, e:'Easy',  c:'other'},
+  {id:'t4',i:'ti-wash',   t:'Run full loads in washing machine',  d:'Half-load = same energy as full load. Cold-water wash saves the heating energy on top.',                                          s:6, e:'Easy',  c:'laundry'},
+  {id:'t5',i:'ti-chef-hat',t:'Microwave over gas/electric stove', d:'Microwaves use 80% less energy for the same cooking result. Pressure cookers cut time by 70%.',                                  s:10,e:'Easy',  c:'kitchen'},
+  {id:'t6',i:'ti-fan',    t:'Use ceiling fans before AC',         d:'Fans draw ~50 W vs ~1500 W for AC. Fan + 24°C AC is cheaper and equally comfortable as 19°C AC alone.',                         s:12,e:'Easy',  c:'cooling'},
+  {id:'t7',i:'ti-device-floppy',t:'Optimise refrigerator settings',d:'Set fridge 3–4°C, freezer −18°C. Clean condenser coils annually. Good maintenance = 15% less power.',                         s:4, e:'Easy',  c:'kitchen'},
+  {id:'t8',i:'ti-sun',    t:'Maximise natural daylight',          d:'Rearrange workspaces near windows, use light-coloured blinds. Saves 3–5% on lighting loads.',                                    s:3, e:'Easy',  c:'lighting'},
+  {id:'t9',i:'ti-clock',  t:'Schedule heavy loads off-peak',      d:'Run washer, dishwasher and EV charger after 10 PM for time-of-use slab savings.',                                                s:7, e:'Medium',c:'other'},
+  {id:'t10',i:'ti-home',  t:'Seal drafts & improve insulation',   d:'Foam sealing gaps around doors and windows reduces AC/heater loads by 20–30%. Cost: ₹50–200.',                                  s:20,e:'Hard',  c:'cooling'},
+];
+
+function save(){localStorage.setItem('zap_devs',JSON.stringify(devs));localStorage.setItem('zap_logs',JSON.stringify(logs));localStorage.setItem('zap_tips',JSON.stringify(tips));}
+
+const R=()=>parseFloat(document.getElementById('g-rate').value)||6;
+const mkwh=d=>Math.round((d.watts/1000)*d.hours*30*10)/10;
+const tot=()=>Math.round(devs.reduce((s,d)=>s+mkwh(d),0)*10)/10;
+const inr=n=>'₹'+Number(n).toLocaleString('en-IN');
+const now12=()=>new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+
+/* ════ NAVIGATION ════ */
+const PNAMES={dash:'Dashboard',analytics:'Analytics',forecast:'Forecast',devices:'Devices',meter:'Meter Log',tips:'Saving Tips',chat:'ZAP Assistant'};
+let cI=null,hI=null,fI=null;
+
+function go(id,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn,.mob-nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('pg-'+id).classList.add('active');
+  if(btn) btn.classList.add('active');
+  // sync mob and desktop nav
+  const mobBtn=document.getElementById('mob-'+id);
+  if(mobBtn) mobBtn.classList.add('active');
+  document.getElementById('pg-name').textContent=PNAMES[id]||id;
+  closeSidebar();
+  ({dash:drawDash,analytics:drawAnalytics,forecast:drawForecast,devices:drawDevices,meter:drawMeter,tips:drawTips,chat:initChat}[id]||(_=>_))();
+}
+
+function toggleSidebar(){
+  const s=document.getElementById('sidebar'),o=document.getElementById('overlay');
+  s.classList.toggle('open');o.classList.toggle('show');
+}
+function closeSidebar(){
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('show');
+}
+function onRateChange(){drawDash();drawTips();updateMeter();}
+
+/* ════ DASHBOARD ════ */
+function drawDash(){
+  const kwh=tot(),r=R(),bill=Math.round(kwh*r),co2=Math.round(kwh*0.82),GOAL=400;
+  const done=Object.values(tips).filter(Boolean).length;
+  const pct=Math.min(100,Math.round((kwh/GOAL)*100));
+  const alertEl=document.getElementById('d-alert');
+  if(!kwh) alertEl.innerHTML='';
+  else if(kwh>600) alertEl.innerHTML=`<div class="alert al-rose"><i class="ti ti-alert-triangle"></i><span>Very high consumption (${kwh} kWh). Immediately review AC and heating usage.</span></div>`;
+  else if(kwh>GOAL) alertEl.innerHTML=`<div class="alert al-amber"><i class="ti ti-info-circle"></i><span>Above ${GOAL} kWh target. Visit Saving Tips to reduce your bill.</span></div>`;
+  else if(kwh>0) alertEl.innerHTML=`<div class="alert al-green"><i class="ti ti-circle-check"></i><span>Estimated usage (${kwh} kWh) is within the ${GOAL} kWh monthly target. Keep going!</span></div>`;
+
+  document.getElementById('d-metrics').innerHTML=`
+    <div class="metric" style="--mc:var(--cyan);--mc-a:var(--cyan-a)"><div class="metric-shine"></div><div class="metric-glow"></div><div class="metric-ico"><i class="ti ti-bolt"></i></div><div class="metric-lbl">Est. monthly use</div><div class="metric-val">${kwh}<span class="metric-unit"> kWh</span></div><div class="metric-sub">${devs.length} devices tracked</div></div>
+    <div class="metric" style="--mc:var(--amber);--mc-a:var(--amber-a)"><div class="metric-shine"></div><div class="metric-glow"></div><div class="metric-ico"><i class="ti ti-currency-rupee"></i></div><div class="metric-lbl">Est. monthly bill</div><div class="metric-val">${inr(bill)}</div><div class="metric-sub">at ₹${r}/kWh</div></div>
+    <div class="metric" style="--mc:var(--green);--mc-a:var(--green-a)"><div class="metric-shine"></div><div class="metric-glow"></div><div class="metric-ico"><i class="ti ti-leaf"></i></div><div class="metric-lbl">CO₂ footprint</div><div class="metric-val">${co2}<span class="metric-unit"> kg</span></div><div class="metric-sub">0.82 kg per kWh</div></div>
+    <div class="metric" style="--mc:var(--purple);--mc-a:var(--purple-a)"><div class="metric-shine"></div><div class="metric-glow"></div><div class="metric-ico"><i class="ti ti-checklist"></i></div><div class="metric-lbl">Tips completed</div><div class="metric-val">${done}<span class="metric-unit">/${TIPS.length}</span></div><div class="metric-sub">actions done</div></div>`;
+
+  const cats={};devs.forEach(d=>{cats[d.cat]=(cats[d.cat]||0)+mkwh(d);});
+  const cl=Object.keys(cats),cv=cl.map(l=>cats[l]),cc=cl.map(l=>CC[l]||'#94a3b8');
+  document.getElementById('cat-leg').innerHTML=cl.map((l,i)=>`<span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:${cc[i]};display:inline-block"></span>${l} <b style="color:var(--text)">${cv[i]}</b> kWh</span>`).join('');
+  if(cI) cI.destroy();
+  if(cl.length) cI=new Chart(document.getElementById('cat-c').getContext('2d'),{type:'doughnut',data:{labels:cl,datasets:[{data:cv,backgroundColor:cc,borderWidth:0,hoverOffset:10}]},options:{responsive:true,maintainAspectRatio:false,cutout:'70%',plugins:{legend:{display:false}},animation:{animateRotate:true,duration:600}}});
+
+  const srted=[...devs].sort((a,b)=>mkwh(b)-mkwh(a)).slice(0,6),mx=srted.length?mkwh(srted[0]):1;
+  document.getElementById('top-list').innerHTML=srted.length
+    ?srted.map(d=>`<div style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px;align-items:center"><span style="font-weight:600;display:flex;align-items:center;gap:7px"><i class="ti ${CI[d.cat]||'ti-plug'}" style="color:${CC[d.cat]};font-size:16px"></i>${d.name}</span><span style="font-family:var(--mono);color:var(--lime);font-weight:700;font-size:13px">${mkwh(d)} kWh</span></div><div class="prog-wrap"><div class="prog-bar" style="width:${Math.round((mkwh(d)/mx)*100)}%;background:${CC[d.cat]||'var(--lime)'}"></div></div><div style="font-size:11px;color:var(--text3);margin-top:3px">${inr(Math.round(mkwh(d)*r))}/mo · ${((mkwh(d)/(tot()||1))*100).toFixed(0)}% of total</div></div>`).join('')
+    :'<div class="empty"><i class="ti ti-plug-x"></i><p>Add devices to see top consumers</p></div>';
+
+  const bc=pct<70?'var(--lime)':pct<90?'var(--amber)':'var(--rose)';
+  const gb=pct<70?'bg-lime':pct<90?'bg-amber':'bg-rose';
+  document.getElementById('goal-badge').innerHTML=`<span class="badge ${gb}">${pct<70?'ON TARGET':pct<100?'NEAR LIMIT':'OVER LIMIT'}</span>`;
+  document.getElementById('goal-sec').innerHTML=`
+    <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px">
+      <span style="color:var(--text2)">Target <b style="color:var(--text)">400 kWh</b></span>
+      <span style="color:var(--text2)">Estimate <b style="color:var(--text)">${kwh} kWh</b></span>
+    </div>
+    <div class="prog-wrap tall"><div class="prog-bar tall" style="width:${pct}%;background:${bc}"></div></div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3);margin-top:8px">
+      <span>${pct}% of goal</span>
+      <span>${pct<100?(GOAL-kwh).toFixed(1)+' kWh remaining':Math.round(kwh-GOAL)+' kWh over'}</span>
+    </div>`;
+}
+
+/* ════ DEVICES ════ */
+function drawDevices(){
+  document.getElementById('dev-badge').innerHTML=`<span class="badge bg-cyan">${devs.length} DEVICES</span>`;
+  const list=document.getElementById('dev-list');
+  if(!devs.length){list.innerHTML='<div class="empty"><i class="ti ti-plug-x"></i><p>No devices yet.<br>Add your first device above.</p></div>';return;}
+  const t=tot()||1;
+  list.innerHTML=devs.map((d,i)=>`
+    <div class="dev-row">
+      <div class="dev-ico" style="background:rgba(${hexToRgb(CC[d.cat]||'#94a3b8')},.1);border:1px solid rgba(${hexToRgb(CC[d.cat]||'#94a3b8')},.2);color:${CC[d.cat]||'#94a3b8'}"><i class="ti ${CI[d.cat]||'ti-plug'}"></i></div>
+      <div><div class="dev-name">${d.name}</div><div class="dev-meta">${d.watts} W · ${d.hours} h/day · ${d.cat}</div></div>
+      <div><div class="dev-kwh" style="color:var(--lime)">${mkwh(d)} kWh/mo</div><div class="dev-cost">${inr(Math.round(mkwh(d)*R()))}/mo</div></div>
+      <div class="dev-pct" style="font-size:11px;color:var(--text3)">${((mkwh(d)/t)*100).toFixed(1)}%</div>
+      <button class="ico-btn" onclick="delDev(${i})" aria-label="Remove ${d.name}"><i class="ti ti-trash"></i></button>
+    </div>`).join('');
+}
+function addDev(){
+  const name=document.getElementById('dn').value.trim();
+  const watts=parseFloat(document.getElementById('dw').value);
+  const hours=parseFloat(document.getElementById('dh').value);
+  const cat=document.getElementById('dc').value;
+  if(!name||!watts||!hours){alert('Please fill in all fields.');return;}
+  devs.push({name,watts,hours,cat});save();drawDevices();
+  ['dn','dw','dh'].forEach(id=>document.getElementById(id).value='');
+}
+function delDev(i){if(!confirm(`Remove "${devs[i].name}"?`))return;devs.splice(i,1);save();drawDevices();}
+function hexToRgb(hex){const r=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);return r?`${parseInt(r[1],16)},${parseInt(r[2],16)},${parseInt(r[3],16)}`:'148,163,184';}
+
+/* ════ METER LOG ════ */
+function drawMeter(){
+  const w=document.getElementById('meter-tbl');
+  if(!logs.length){w.innerHTML='<div class="empty"><i class="ti ti-calendar-x"></i><p>No readings yet.<br>Record your first meter reading above.</p></div>';return;}
+  const s=[...logs].sort((a,b)=>b.month.localeCompare(a.month));
+  const rows=s.map((r,i)=>{const p=s[i+1];let tr='';if(p){const d=r.units-p.units;tr=d>0?`<span class="t-up">▲${d}</span>`:`<span class="t-dn">▼${Math.abs(d)}</span>`;}
+    return`<tr><td>${r.month}</td><td><b>${r.units}</b> kWh ${tr}</td><td>${inr(r.bill||0)}</td><td style="color:var(--text3);font-family:var(--mono)">${r.bill&&r.units?(r.bill/r.units).toFixed(2):'—'}</td><td><button class="ico-btn" onclick="delLog('${r.month}')"><i class="ti ti-trash"></i></button></td></tr>`;
+  }).join('');
+  w.innerHTML=`<table class="tbl"><thead><tr><th>Month</th><th>Usage</th><th>Bill</th><th>₹/kWh</th><th></th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+function addLog(){
+  const month=document.getElementById('mm').value,units=parseFloat(document.getElementById('mu').value),bill=parseFloat(document.getElementById('mb').value)||0;
+  if(!month||!units){alert('Enter month and units.');return;}
+  logs=logs.filter(r=>r.month!==month);logs.push({month,units,bill});save();drawMeter();
+  ['mu','mb'].forEach(id=>document.getElementById(id).value='');
+}
+function delLog(month){logs=logs.filter(r=>r.month!==month);save();drawMeter();}
+
+/* ════ TIPS ════ */
+function drawTips(){
+  const r=R(),done=Object.values(tips).filter(Boolean).length;
+  const pot=TIPS.filter(t=>!tips[t.id]).reduce((s,t)=>s+t.s,0);
+  document.getElementById('tips-stat').innerHTML=`<div style="text-align:right"><div style="font-family:var(--mono);font-size:30px;font-weight:700;color:var(--lime)">${done}/${TIPS.length}</div><div style="font-size:12px;color:var(--text2)">done · ~${pot}% more savings possible</div></div>`;
+  document.getElementById('tips-list').innerHTML=TIPS.map(t=>`
+    <div class="tip-row ${tips[t.id]?'done':''}">
+      <div class="tip-ico" style="color:${CC[t.c]||'var(--lime)'}"><i class="ti ${t.i}"></i></div>
+      <div class="tip-body">
+        <div class="tip-title">${t.t}</div>
+        <div class="tip-desc">${t.d}</div>
+        <div class="tip-foot">
+          <span class="badge ${t.e==='Easy'?'bg-green':t.e==='Medium'?'bg-amber':'bg-blue'}">${t.e.toUpperCase()}</span>
+          <span style="font-size:11.5px;color:var(--lime)">saves ~${t.s}% · ≈${inr(Math.round(t.s*r*3))}/mo</span>
+        </div>
+      </div>
+      <button class="btn btn-sm ${tips[t.id]?'btn-ghost':'btn-lime'}" onclick="togTip('${t.id}')">${tips[t.id]?'Undo':'✓ Done'}</button>
+    </div>`).join('');
+}
+function togTip(id){tips[id]=!tips[id];save();drawTips();}
+
+/* ════ ANALYTICS ════ */
+function drawAnalytics(){
+  const s=[...logs].sort((a,b)=>a.month.localeCompare(b.month));
+  const lbls=s.map(r=>r.month),vals=s.map(r=>r.units);
+  if(hI) hI.destroy();
+  hI=new Chart(document.getElementById('hist-c').getContext('2d'),{type:'line',data:{labels:lbls,datasets:[{label:'kWh',data:vals,borderColor:'#d4f722',backgroundColor:'rgba(212,247,34,.07)',fill:true,tension:.4,pointBackgroundColor:'#d4f722',pointRadius:5,pointHoverRadius:8,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:false,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#3d4758',font:{size:11}}},x:{grid:{display:false},ticks:{color:'#3d4758',font:{size:11}}}}}});
+  const rows=[...s].reverse().map((r,i,arr)=>{const p=arr[i+1];if(!p)return`<tr><td>${r.month}</td><td><b>${r.units}</b> kWh</td><td>—</td><td>${inr(r.bill||0)}</td></tr>`;const d=r.units-p.units,pct=p.units?((d/p.units)*100).toFixed(1):'—',cls=d>0?'t-up':'t-dn',ar=d>0?'▲':'▼';return`<tr><td>${r.month}</td><td><b>${r.units}</b> kWh</td><td class="${cls}">${ar} ${Math.abs(d)} (${pct}%)</td><td>${inr(r.bill||0)}</td></tr>`;}).join('');
+  document.getElementById('mom-tbl').innerHTML=`<table class="tbl"><thead><tr><th>Month</th><th>Usage</th><th>Change</th><th>Bill</th></tr></thead><tbody>${rows||'<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:24px">Need at least 2 months of readings</td></tr>'}</tbody></table>`;
+}
+
+/* ════ FORECAST ════ */
+function drawForecast(){
+  const s=[...logs].sort((a,b)=>a.month.localeCompare(b.month)),n=s.length;
+  const fc=document.getElementById('fc-cards');
+  if(n<2){fc.innerHTML='<div style="color:var(--text3);font-size:13px;grid-column:1/-1">Add at least 2 meter readings to generate a forecast.</div>';return;}
+  const xs=s.map((_,i)=>i),ys=s.map(r=>r.units),xm=xs.reduce((a,b)=>a+b,0)/n,ym=ys.reduce((a,b)=>a+b,0)/n;
+  const slp=xs.reduce((v,x,i)=>v+(x-xm)*(ys[i]-ym),0)/xs.reduce((v,x)=>v+(x-xm)**2,0);
+  const int=ym-slp*xm,pred=x=>Math.max(0,Math.round(int+slp*x));
+  const base=new Date(s[n-1].month+'-01');
+  const months=Array.from({length:3},(_,i)=>{const d=new Date(base);d.setMonth(d.getMonth()+i+1);return{label:d.toISOString().slice(0,7),kwh:pred(n-1+i+1)};}).map(m=>({...m,bill:Math.round(m.kwh*R())}));
+  fc.innerHTML=months.map(m=>`<div class="fc-card"><div class="fc-mo">${m.label}</div><div class="fc-kwh">${m.kwh}</div><div class="fc-bill">${inr(m.bill)}</div><span class="badge ${m.kwh<400?'bg-green':m.kwh<500?'bg-amber':'bg-rose'}" style="margin-top:10px;display:inline-flex">${m.kwh<400?'ON TRACK':m.kwh<500?'MODERATE':'HIGH'}</span></div>`).join('');
+  const aL=s.map(r=>r.month).concat(months.map(m=>m.label));
+  const aD=s.map(r=>r.units).concat(months.map(()=>null));
+  const fD=s.map(()=>null).concat(months.map(m=>m.kwh));if(n) fD[n-1]=s[n-1].units;
+  if(fI) fI.destroy();
+  fI=new Chart(document.getElementById('fc-c').getContext('2d'),{type:'line',data:{labels:aL,datasets:[{label:'Actual',data:aD,borderColor:'#60a5fa',backgroundColor:'rgba(96,165,250,.07)',fill:true,tension:.4,pointRadius:4,borderWidth:2},{label:'Forecast',data:fD,borderColor:'#fbbf24',borderDash:[7,4],backgroundColor:'rgba(251,191,36,.05)',fill:true,tension:.4,pointRadius:4,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8b95a6',font:{size:12},boxWidth:12}}},scales:{y:{beginAtZero:false,grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#3d4758'}},x:{grid:{display:false},ticks:{color:'#3d4758',font:{size:11}}}}}});
+}
+
+/* ════ EXPORT ════ */
+function doExport(){
+  let c='ZAP Home Energy Export\n\nDevices\nName,Watts,Hours/day,Category,kWh/month,Bill/month\n';
+  devs.forEach(d=>{c+=`${d.name},${d.watts},${d.hours},${d.cat},${mkwh(d)},${Math.round(mkwh(d)*R())}\n`;});
+  c+='\nMeter Readings\nMonth,Units (kWh),Bill (INR)\n';
+  [...logs].sort((a,b)=>a.month.localeCompare(b.month)).forEach(r=>{c+=`${r.month},${r.units},${r.bill||''}\n`;});
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([c],{type:'text/csv'}));a.download='zap-energy.csv';a.click();
+}
+
+/* ════ LIVE METER ════ */
+function updateMeter(){
+  const k=tot(),r=R(),GOAL=400;
+  const pv=document.getElementById('pm-val'),pb=document.getElementById('pm-bill'),bar=document.getElementById('pm-bar');
+  if(pv) pv.textContent=k;
+  if(pb) pb.textContent=inr(Math.round(k*r))+' estimated';
+  if(bar){const pct=Math.min(100,Math.round((k/GOAL)*100));bar.style.width=pct+'%';bar.style.background=pct<70?'var(--lime)':pct<90?'var(--amber)':'var(--rose)';}
+}
+
+/* ════════════════════════════════
+   RULE-BASED AI ENGINE — ZAP BOT v2
+════════════════════════════════ */
+let _lastTopic='';   // conversational memory: last matched topic
+
+function zapBot(input){
+  const q=input.toLowerCase().trim();
+  const kwh=tot(),r=R(),bill=Math.round(kwh*r),co2=Math.round(kwh*0.82),GOAL=400;
+  const topN=n=>[...devs].sort((a,b)=>mkwh(b)-mkwh(a)).slice(0,n);
+  const catD=cat=>devs.filter(d=>d.cat===cat);
+  const noData=(ctx='')=>`Abhi koi device nahi add kiya hai${ctx?' ('+ctx+')':''}. Pehle **Devices** page par jaao aur apne appliances add karo — main tab exact calculations kar sakta hoon! ⚡`;
+
+  /* ── THANKS / ACKNOWLEDGEMENT ── */
+  if(/^(thank|shukriya|dhanyawad|ok thanks|theek hai|got it|acha|okay|nice|great|perfect|bahut acha|👍|🙏)/.test(q))
+    return{t:`Khushi hui madad karke! 😊\n\nAur koi sawaal ho toh batao — bijli, bill, saving tips, solar — main hoon! 💡`,r:'Ack'};
+
+  /* ── WHAT ARE YOU / WHO ── */
+  if(/kaun ho|what are you|kya ho tum|introduce|tum kya|apna parichay|about (you|bot|zap)/.test(q))
+    return{t:`🤖 **Main hoon ZAP Bot!**\n\n${dt([['🧠 Type','Rule-Based AI (Pattern Engine)'],['📡 Mode','Offline — No internet needed'],['⚡ Speed','Instant responses'],['🗣️ Language','Hinglish + English'],['📊 Data','Aapke devices + meter readings']])}\n\nMain aapke ghar ki bijli ka expert hoon — bills, saving tips, solar, tariff, device analysis — sab kuch! Type karo **help** for full topic list.`,r:'Self intro'};
+
+  /* ── LANGUAGE SWITCH ── */
+  if(/english mein|english me|in english|angrezi/.test(q))
+    return{t:`Sure! I'll respond in English from now. Ask me anything about your electricity — bills, saving tips, solar, tariff, device analysis, and more! Type **help** for all topics.`,r:'Lang: EN'};
+  if(/hindi mein|hindi me|hindi|hinglish/.test(q))
+    return{t:`Bilkul! Ab main Hinglish mein jawab dunga. Apni bijli ke baare mein kuch bhi poochho! Type karo **help** topics dekhne ke liye.`,r:'Lang: HI'};
+
+  /* ── NUMBERS ONLY (direct kWh query) ── */
+  if(/^\d+(\.\d+)?\s*(kwh|unit|kw)?$/.test(q)){
+    const u=parseFloat(q);
+    const est=Math.round(u*r);
+    let slab='';
+    if(u<=100) slab='Slab 1 ✅ (~₹3.46/kWh)';
+    else if(u<=300) slab='Slab 2 🟡 (~₹7.05/kWh)';
+    else if(u<=500) slab='Slab 3 🟠 (~₹9.10/kWh)';
+    else slab='Slab 4+ 🔴 (~₹11.07/kWh)';
+    return{t:`⚡ **${u} kWh ke liye estimate:**\n\n${dt([['Units',u+' kWh'],['Estimated bill',inr(est)],['MSEDCL Slab',slab],['Rate used','₹'+r+'/kWh (sidebar se)']])}\n\n💡 Zyada accurate bill ke liye sidebar mein apna actual rate set karo.`,r:'Quick calc'};
+  }
+
+  const dt=rows=>rows.length?`<div class="data-table">${rows.map(([l,v])=>`<div class="data-row"><span class="lbl">${l}</span><span class="val">${v}</span></div>`).join('')}</div>`:'';
+
+  /* ── GREETING ── */
+  if(/^(hi|hello|hey|namaste|helo|hii|kya haal|good morning|good evening|good afternoon|namskar|salaam|jai hind|hola|yo|sup)\b/.test(q)){
+    const hour=new Date().getHours();
+    const greet=hour<12?'Suprabhat 🌅':hour<17?'Namaskar ☀️':'Shubh Sandhya 🌇';
+    _lastTopic='greeting';
+    return{t:`${greet} 🙏 Main **ZAP Bot** hoon — aapka ghar ka bijli expert!\n\n${dt([['📱 Devices tracked',devs.length||'Koi nahi — add karo!'],['⚡ Monthly estimate',kwh?kwh+' kWh':'—'],['💰 Estimated bill',kwh?inr(bill):'—'],['🌿 CO₂ footprint',kwh?co2+' kg/mo':'—']])}\n${devs.length?'Kuch bhi poochho!':'💡 **Pehle devices add karo** Devices page par jaake, phir main aapka bill calculate kar sakta hoon!'}\n\n**Quick start:** Type karo **help** ya neeche ke buttons use karo ⬇️`,r:'Greeting'};
+  }
+
+  /* ── BILL / COST ── */
+  if(/bill|kharcha|cost|kitna (pay|lagta|aata|hai)|rupee|paisa|amount|monthly (kharcha|bill|cost)|mahine ka|total bill/.test(q)){
+    if(!devs.length) return{t:noData(),r:'No data'};
+    _lastTopic='bill';
+    const top3=topN(3);
+    let slabNote='',savings='';
+    if(kwh<=100){slabNote='✅ Slab 1 (0–100 units) — Sabse sasta rate!';}
+    else if(kwh<=300){slabNote='🟡 Slab 2 (101–300 units) — Moderate rate.';savings=`100 se neeche aao → save ~${inr(Math.round((kwh-100)*3.59))}/mo`;}
+    else if(kwh<=500){slabNote='🟠 Slab 3 (301–500 units) — High rate.';savings=`Slab 2 mein jaao → save ~${inr(Math.round((kwh-300)*2.05))}/mo`;}
+    else{slabNote='🔴 Slab 4+ (500+ units) — Maximum rate!';savings=`Slab 3 mein jaao → save ~${inr(Math.round((kwh-500)*1.97))}/mo`;}
+    const dailyCost=Math.round(bill/30);
+    return{t:`💰 **Estimated Monthly Bill: ${inr(bill)}**\n\n*Formula: ₹${r}/kWh × ${kwh} kWh*\n\n${dt([['⚡ Total kWh',''+kwh+' kWh'],['💰 Estimated bill',inr(bill)+'/month'],['📆 Daily cost','~'+inr(dailyCost)+'/day'],['📊 MSEDCL Slab',slabNote],['🎯 vs 400 kWh target',kwh<=400?'✅ Under target':'⚠️ '+(kwh-400)+' kWh over']])}\n\n**Top 3 bijli khaane waale:**\n${top3.map((d,i)=>`${i+1}. **${d.name}**: ${mkwh(d)} kWh → ${inr(Math.round(mkwh(d)*r))}/mo`).join('\n')}${savings?'\n\n💡 **Slab saving tip:** '+savings:''}\n\n🔥 Saving tips ke liye type karo: "saving tips do"`,r:'Bill calculation'};
+  }
+
+  /* ── TOP CONSUMERS ── */
+  if(/top|highest|most|sabse (zyada|bada|jyada)|maximum|biggest|consumer|kaun khata|worst|heavy/.test(q)){
+    if(!devs.length) return{t:noData(),r:'No data'};
+    _lastTopic='top';
+    const sorted=topN(devs.length);
+    const worst=sorted[0];
+    const tip={cooling:'AC 24°C set karo → instant 15% saving!',lighting:'LED bulbs lagao → 87% saving!',kitchen:'Microwave > stove → 80% less energy!',water:'Geyser timer use karo → 30% saving!',laundry:'Full loads only → 6% saving!'}[worst.cat]||'Use kam karo ya 5-star model consider karo.';
+    return{t:`⚡ **Energy Hogs — Aapke ${devs.length} Devices:**\n\n${dt(sorted.map((d,i)=>[`${['🥇','🥈','🥉'][i]||`${i+1}.`} ${d.name}`,`${mkwh(d)} kWh · ${inr(Math.round(mkwh(d)*r))}/mo · ${((mkwh(d)/(kwh||1))*100).toFixed(0)}%`]))}\n\n🔴 **Biggest culprit: ${worst.name}** — ${((mkwh(worst)/(kwh||1))*100).toFixed(0)}% of aapka total bill!\n💡 **Quick fix:** ${tip}`,r:'Top consumers'};
+  }
+
+  /* ── SPECIFIC DEVICE ── */
+  const mDev=devs.find(d=>d.name.toLowerCase().split(' ').some(w=>w.length>2&&q.includes(w)));
+  if(mDev&&!/tip|saving|reduce/.test(q)){
+    const k=mkwh(mDev),b=Math.round(k*r),pct=kwh?((k/kwh)*100).toFixed(1):0;
+    const daily=Math.round((mDev.watts/1000)*mDev.hours*r*100)/100;
+    const wkly=Math.round(daily*7*100)/100;
+    const tip={cooling:`AC ko 24°C set karo → save ${inr(Math.round(b*0.15))}/mo instantly!`,lighting:`LED bulb lagao → 75% energy saving guaranteed!`,laundry:`Full loads mein chalao aur cold water use karo.`,kitchen:`Microwave use karo → 80% less energy than stove!`,water:`Geyser ko 50°C par set karo aur timer use karo.`}[mDev.cat]||`Use kam karo ya 5-star rated model consider karo.`;
+    return{t:`🔌 **${mDev.name} — Complete Analysis:**\n\n${dt([['⚡ Wattage',mDev.watts+' W'],['⏱ Daily use',mDev.hours+' hours'],['📅 Monthly kWh',k+' kWh'],['💰 Monthly cost',inr(b)],['📆 Daily cost',inr(daily)],['🗓 Weekly cost',inr(wkly)],['📊 % of bill',pct+'%']])}\n\n💡 **Tip:** ${tip}`,r:'Device detail'};
+  }
+
+  /* ── CO2 / CARBON ── */
+  if(/co2|carbon|emission|environment|green|pollution|footprint|planet|climate/.test(q)){
+    const trees=Math.round(co2/21),annual=co2*12;
+    const carKm=Math.round(co2*1000/170);
+    return{t:`🌿 **Carbon Footprint — Full Analysis:**\n\n${dt([['📅 Monthly CO₂',co2+' kg'],['📆 Annual CO₂',annual+' kg'],['🌳 Trees to offset',trees+' trees/year'],['🚗 = Driving',carKm+' km/month'],['🏭 Grid factor','0.82 kg/kWh (India avg)']])}\n\n**Top 3 green actions for YOUR home:**\n${catD('cooling').length?`- ❄️ AC 24°C set karo → save ~${Math.round(co2*0.12)} kg CO₂/mo\n`:''}- 💡 LED bulbs lagao → save ~${Math.round(co2*0.05)} kg CO₂/mo\n- 🔌 Standby devices unplug karo → save ~${Math.round(co2*0.04)} kg CO₂/mo\n\n✨ These 3 steps = **~${Math.round(co2*0.21)} kg CO₂ reduction/month!**`,r:'CO₂ analysis'};
+  }
+
+  /* ── MSEDCL TARIFF ── */
+  if(/msedcl|slab|tariff|per unit|unit rate|rate kya|electricity rate|meter|unit price/.test(q)){
+    let cur,advice;
+    if(kwh<=100){cur='Slab 1 ✅';advice='Bahut acha! Sabse sasta rate. 100 se neeche rehna best hai.';}
+    else if(kwh<=300){cur='Slab 2 🟡';advice='Decent. 300 se neeche rehne ki koshish karo — savings bohot hongi.';}
+    else if(kwh<=500){cur='Slab 3 🟠';advice='Higher rate. Slab 2 mein jaane se ₹'+Math.round((kwh-300)*2.05)+'/mo bachega!';}
+    else{cur='Slab 4+ 🔴';advice='Highest rate! Urgent action — especially AC usage khatam karo raat ko.';}
+    return{t:`📋 **MSEDCL Residential Tariff Slabs (2024 approx.):**\n\n${dt([['Slab 1: 0–100 units','~₹3.46/kWh'],['Slab 2: 101–300 units','~₹7.05/kWh'],['Slab 3: 301–500 units','~₹9.10/kWh'],['Slab 4+: 500+ units','~₹11.07/kWh'],['Your status ('+kwh+' kWh)',cur]])}\n\n💡 **${advice}**\n\n*Note: Fixed charges + wheeling charges + taxes bhi add hote hain actual bill mein.*`,r:'Tariff guide'};
+  }
+
+  /* ── SAVING TIPS ── */
+  if(/tip|saving|save|reduce|kam karo|bachao|cut|improve|efficient|bijli bachao|kaise (bachao|save|kam)|energy save|paisa bachao/.test(q)){
+    _lastTopic='tips';
+    if(!devs.length) return{t:`Pehle devices add karo, phir **personalized** tips milenge! Abhi generic tips:\n\n- 💡 **LED bulbs lagao** → 8% saving\n- ❄️ **AC 24°C set karo** → 15% saving\n- 🔌 **Standby plugs hatao** → 6% saving\n- 🫧 **Full load washer** → 6% saving\n- 🚿 **Geyser timer use karo** → 5% saving\n\n👆 Devices add karo → exact rupees mein savings milegi!`,r:'Generic tips'};
+    const cats=[...new Set(devs.map(d=>d.cat))];
+    const p=[];
+    if(cats.includes('cooling'))p.push(`❄️ **AC 24°C set karo** → save ${inr(Math.round(bill*0.15))}/mo _(biggest impact!)_`);
+    if(cats.includes('cooling'))p.push(`🌀 **Ceiling fan pehle chalao** → AC use 40% kam hoga`);
+    if(cats.includes('lighting'))p.push(`💡 **Full LED switch** → save ${inr(Math.round(bill*0.08))}/mo`);
+    if(cats.includes('kitchen'))p.push(`🍳 **Microwave > gas+electric stove** → save ${inr(Math.round(bill*0.10))}/mo`);
+    if(cats.includes('laundry'))p.push(`🫧 **Full loads only, cold water** → save ${inr(Math.round(bill*0.06))}/mo`);
+    if(cats.includes('water'))p.push(`🚿 **Geyser 50°C + timer** → save ${inr(Math.round(bill*0.08))}/mo`);
+    if(cats.includes('entertainment'))p.push(`📺 **TV standby band karo** → save ${inr(Math.round(bill*0.03))}/mo`);
+    p.push(`🔌 **Phantom loads** (chargers, set-top boxes) unplug karo → save ${inr(Math.round(bill*0.06))}/mo`);
+    const totalSave=Math.round(bill*Math.min(0.45,0.08*p.length));
+    return{t:`💚 **Personalized Saving Plan — Aapke Ghar Ke Liye:**\n\n${p.join('\n')}\n\n${dt([['💰 Total potential saving','~'+inr(totalSave)+'/month'],['📆 Annual potential saving','~'+inr(totalSave*12)+'/year'],['📊 Bill reduction','~'+Math.round((totalSave/Math.max(bill,1))*100)+'% possible']])}\n\n✅ **Saving Tips** page par jaao aur har completed action mark karo!`,r:'Saving tips'};
+  }
+
+  /* ── AC ANALYSIS ── */
+  if(/\bac\b|air cond|split|inverter|cooler|air cool/.test(q)){
+    const acs=catD('cooling');
+    if(!acs.length) return{t:`Koi AC ya cooling device add nahi kiya. Devices page par jaao! ❄️`,r:'No AC'};
+    const acK=acs.reduce((s,d)=>s+mkwh(d),0),acB=Math.round(acK*r);
+    return{t:`❄️ **AC / Cooling — Complete Analysis:**\n\n${dt(acs.map(d=>[d.name+' ('+d.hours+'h/day)',mkwh(d)+' kWh · '+inr(Math.round(mkwh(d)*r))+'/mo']))}\n${dt([['Total cooling cost',inr(acB)+'/month'],['% of total bill',((acK/(kwh||1))*100).toFixed(0)+'%'],['If set to 24°C (save 15%)','Save ~'+inr(Math.round(acB*0.15))+'/mo'],['Annual cooling bill',inr(acB*12)]])}\n\n**Smart AC strategies:**\n- 🌡️ **24°C thermostat** — biggest single saving\n- 🌀 **Ceiling fan** first — only use AC when needed\n- ⏰ **Sleep timer** — auto-off after 1–2 hours\n- 🔧 **Annual service** — dirty filter = 10% loss\n- ⭐ **5-star inverter** — 40% cheaper vs 3-star`,r:'AC analysis'};
+  }
+
+  /* ── SOLAR ── */
+  if(/solar|panel|renewable|sun|rooftop|pv\b|photovoltaic/.test(q)){
+    const sKw=Math.max(1,Math.ceil(kwh/120));
+    const cost=sKw*70000,subsidy=Math.min(sKw,3)*28000,netCost=cost-subsidy;
+    const annualSave=Math.round(bill*12*0.75),payback=Math.round(netCost/annualSave*10)/10;
+    return{t:`☀️ **Solar Feasibility Calculator:**\n\n${dt([['⚡ Your monthly usage',kwh+' kWh'],['🔆 Recommended system',sKw+' kW rooftop'],['💸 System cost (est.)',inr(cost)],['🏛️ Govt subsidy (~40%)','-'+inr(subsidy)],['💳 Net cost after subsidy',inr(netCost)],['📆 Annual bill savings',inr(annualSave)],['⏳ Payback period',payback+' years'],['📈 25-year savings',inr(annualSave*25-netCost)]])}\n\n**Action steps:**\n- Apply on **PM Surya Ghar** portal (pmsuryagharyojana.gov.in)\n- Get MSEDCL **net metering** connection\n- Collect 3+ quotes from MNRE-approved installers\n- Choose **monocrystalline** panels for best efficiency`,r:'Solar calculator'};
+  }
+
+  /* ── ENERGY SCORE ── */
+  if(/score|grade|rating|assessment|green score|performance|rank/.test(q)){
+    let grade,score,msg,cl;
+    if(!kwh){grade='N/A';score=0;msg='Add devices to get scored.';cl='bg-cyan';}
+    else if(kwh<=150){grade='A+';score=98;msg='Exceptional efficiency!';cl='bg-green';}
+    else if(kwh<=250){grade='A';score=85;msg='Excellent — well below average.';cl='bg-green';}
+    else if(kwh<=350){grade='B+';score=72;msg='Good — minor improvements possible.';cl='bg-lime';}
+    else if(kwh<=450){grade='B';score=60;msg='Average — several easy wins available.';cl='bg-amber';}
+    else if(kwh<=600){grade='C';score=42;msg='High — significant reduction needed.';cl='bg-amber';}
+    else{grade='D';score=22;msg='Very high — urgent action required!';cl='bg-rose';}
+    const tipDone=Object.values(tips).filter(Boolean).length;
+    return{t:`🏆 **Your Energy Score:**\n\n${dt([['📊 Grade',grade],['🔢 Score',score+' / 100'],['⚡ Usage',kwh+' kWh/month'],['🎯 Target','400 kWh/month'],['📈 Target %',Math.min(100,Math.round((GOAL/Math.max(kwh,1))*100))+'%'],['✅ Tips done',tipDone+' / '+TIPS.length],['🌿 CO₂',co2+' kg/month']])}\n\n<span class="msg-badge">${grade} — ${msg}</span>\n\n${score<70?'💪 **Improve your score:** Saving Tips page par jao aur actions complete karo!':'🎉 **Great work!** Keep maintaining these habits.'}`,r:'Energy score'};
+  }
+
+  /* ── GEYSER / WATER ── */
+  if(/geyser|water heat|boiler|hot water|geysir|heater/.test(q)){
+    const wD=catD('water'),wK=wD.reduce((s,d)=>s+mkwh(d),0);
+    return{t:`🚿 **Water Heating Analysis:**\n\n${wD.length?dt(wD.map(d=>[d.name,mkwh(d)+' kWh · '+inr(Math.round(mkwh(d)*r))+'/mo'])):'No water device added.'}\n${dt([['Total water heating',inr(Math.round(wK*r))+'/month'],['Annual cost',inr(Math.round(wK*r*12))]])}\n\n**Saving tips:**\n- 🌡️ **Temperature 50°C** (not 60–70°C) saves 10%\n- ⏰ **Timer use karo** — 15–20 min pehle on karo\n- 🏗️ **Insulated pipes** — 15% heat loss reduction\n- 🌞 **Solar water heater** — ₹15,000–30,000 install, payback 3–4 years\n- 🚿 **Shower time limit** — 5–7 min max`,r:'Water heating'};
+  }
+
+  /* ── SMART HOME ── */
+  if(/smart|automation|iot|home auto|sensor|smart plug|wifi/.test(q)){
+    return{t:`🏠 **Smart Home Energy Upgrades (by ROI):**\n\n${dt([['🔌 Smart plugs (₹500–1,500 each)','Kills standby · Payback 2–3 months'],['💡 Smart LED bulbs (₹200–500)','Auto dim · Motion off · Payback 4–6 mo'],['🌡️ Smart thermostat (₹3,000–8,000)','15–20% AC saving · Payback 6–10 mo'],['⚡ Smart energy monitor (₹2,000–4,000)','Real-time alerts · Payback 6 months'],['🤖 AI home controller','Scene automation · Full integration']])}\n\n**Best bang for buck:** Smart plugs first — highest immediate ROI!\n\n**Recommended ecosystem:**\n- Philips Hue / Syska (lighting)\n- Ampoule / Wipro (smart switches)\n- Sensibo / Cielo (AC smart control)`,r:'Smart home'};
+  }
+
+  /* ── COMPARISON / TREND ── */
+  if(/compar|trend|last month|pichle|increas|decreas|mahina|analysis/.test(q)){
+    if(logs.length<2) return{t:`Comparison ke liye 2+ months ke meter readings chahiye. **Meter Log** page par jaao aur add karo! 📊`,r:'Need data'};
+    const s=[...logs].sort((a,b)=>b.month.localeCompare(a.month));
+    const [latest,prev]=s;
+    const diff=latest.units-prev.units,pct=((diff/prev.units)*100).toFixed(1);
+    const billDiff=Math.round(diff*r);
+    const trend=diff>0?`📈 ${diff} kWh zyada (${pct}% increase)`:diff<0?`📉 ${Math.abs(diff)} kWh kam (${Math.abs(pct)}% decrease)`:'➡️ Same as last month';
+    const action=diff>50?'Significantly badh raha hai — AC usage check karo!':diff>0?'Thoda badha hai — saving tips follow karo.':diff<0?'Excellent! Kam ho raha hai 🎉 Keep it up!':'Stable hai.';
+    return{t:`📅 **Month-over-Month Comparison:**\n\n${dt([[latest.month,latest.units+' kWh · '+inr(latest.bill||0)],[prev.month,prev.units+' kWh · '+inr(prev.bill||0)],['Change',trend],['Bill impact',inr(Math.abs(billDiff))+(diff>0?' extra':' saved')]])}\n\n**Assessment:** ${action}`,r:'Trend analysis'};
+  }
+
+  /* ── LED / LIGHTING ── */
+  if(/led|bulb|light|lamp|tube|cfl/.test(q)){
+    const lD=catD('lighting'),lK=lD.reduce((s,d)=>s+mkwh(d),0);
+    const ledSave=Math.round(lK*r*0.65);
+    return{t:`💡 **Lighting Analysis:**\n\n${lD.length?dt(lD.map(d=>[d.name,mkwh(d)+' kWh · '+inr(Math.round(mkwh(d)*r))+'/mo'])):'No lighting devices added.'}\n${dt([['Total lighting cost',inr(Math.round(lK*r))+'/month'],['With full LED switch',inr(Math.round(lK*r*0.35))+'/month'],['Monthly saving (LED)',inr(ledSave)],['Annual saving (LED)',inr(ledSave*12)]])}\n\n**LED vs others:**\n- Incandescent (60W) → LED (8W) = **87% saving!**\n- CFL (23W) → LED (8W) = **65% saving!**\n- Lifespan: LED = **25,000 hours** vs incandescent 1,000 hrs\n- LED payback: typically **3–6 months**`,r:'LED analysis'};
+  }
+
+  /* ── USAGE SUMMARY ── */
+  if(/usage|consumption|total|kitna (use|kwh)|monthly.*kwh|breakdown|summary/.test(q)){
+    if(!devs.length) return{t:noData(),r:'No data'};
+    const cats={};devs.forEach(d=>{cats[d.cat]=(cats[d.cat]||0)+mkwh(d);});
+    const catRows=Object.entries(cats).sort((a,b)=>b[1]-a[1]).map(([cat,k])=>[cat,k+' kWh ('+((k/(kwh||1))*100).toFixed(0)+'%)']);
+    return{t:`📊 **Monthly Usage Summary:**\n\n${dt([['⚡ Total usage',kwh+' kWh/month'],['💰 Estimated bill',inr(bill)+'/month'],['🌿 CO₂',co2+' kg/month'],['🎯 vs Target (400 kWh)',kwh<=400?'✅ '+(400-kwh)+' kWh under':'⚠️ '+(kwh-400)+' kWh over']])}\n\n**By Category:**\n${dt(catRows)}`,r:'Usage summary'};
+  }
+
+  /* ── FRIDGE ── */
+  if(/fridge|refrigerator|ref\b|freeze|cooler.*kitchen/.test(q)){
+    const f=devs.find(d=>d.name.toLowerCase().includes('fridge')||d.name.toLowerCase().includes('refrig'));
+    return{t:`🧊 **Refrigerator Optimization Guide:**\n\n${f?dt([[f.name,mkwh(f)+' kWh · '+inr(Math.round(mkwh(f)*r))+'/mo']]):''}\n${dt([['Ideal fridge temp','3–4°C'],['Ideal freezer temp','−18°C'],['Proper settings save','~15% energy']])}\n\n**Maintenance checklist:**\n- 🧹 **Condenser coils** — clean annually\n- 🚪 **Door gasket test** — close door on paper; if slides out, seal is worn\n- ❄️ **Defrost regularly** — frost buildup = higher energy use\n- 📍 **Location** — keep 5 cm from wall for ventilation\n- 🌡️ **Don't put hot food** directly in fridge`,r:'Fridge tips'};
+  }
+
+  /* ── HELP ── */
+  if(/help|kya kar sakta|what can|commands|menu|options|sab kuch|topics/.test(q))
+    return{t:`🤖 **ZAP Bot — Complete Topic Guide:**\n\n**💰 Bill & Cost:**\n- "bill kitna hai" · "monthly kharcha"\n- "MSEDCL slab tariff"\n\n**⚡ Device Analysis:**\n- "sabse zyada kaun khata hai" — top consumers\n- "[device name]" — any device's full report\n- "AC ka kharcha" · "geyser tips" · "fridge optimize"\n\n**💡 Saving Advice:**\n- "saving tips do" — personalized to YOUR devices\n- "LED tips" · "smart home upgrades"\n\n**📊 Data & Tracking:**\n- "usage summary" — full breakdown\n- "energy score" — grade A+ to D\n- "CO2 footprint" — carbon analysis\n- "last month compare" — trend analysis\n\n**☀️ Future Planning:**\n- "solar lagana chahiye" — ROI calculator\n\nKisi bhi device ka naam type karo for instant analysis!`,r:'Help menu'};
+
+  /* ── FALLBACK ── */
+  const suggest=['bill kitna hai?','top consumers?','saving tips','energy score','MSEDCL slab'];
+  return{t:`🤔 Ye topic mujhe abhi nahi pata: **"${input.length>40?input.slice(0,40)+'...':input}"**\n\n**Try these instead:**\n${suggest.map(s=>`- "${s}"`).join('\n')}\n\nYa type karo **"help"** — complete topic list dekhne ke liye.`,r:'Fallback'};
+}
+
+/* ════ CHAT UI ════ */
+function initChat(){
+  updateMeter();
+  const msgs=document.getElementById('chat-msgs');
+  if(!msgs.children.length){
+    addBot(`👋 **Namaste! Main ZAP Bot hoon** — aapka offline rule-based energy AI assistant.\n\n${devs.length>0?dt([['📱 Devices',devs.length+' tracked'],['⚡ Monthly est.',tot()+' kWh'],['💰 Est. bill',inr(Math.round(tot()*R()))],['🏆 Energy grade',tot()<=250?'A (Excellent)':tot()<=400?'B (Good)':tot()<=600?'C (High)':'D (Very High)']]):'Koi device abhi nahi add kiya. **Devices** page par jaao! 💡'}\n\nNeeche quick questions ya apna sawaal type karo ⬇️`,null);
+  }
+  function dt(r){return`<div class="data-table">${r.map(([l,v])=>`<div class="data-row"><span class="lbl">${l}</span><span class="val">${v}</span></div>`).join('')}</div>`;}
+}
+
+function addBot(text,rule){
+  const w=document.getElementById('chat-msgs');
+  const rBadge=rule?`<div class="msg-badge"><i class="ti ti-cpu"></i>${rule}</div>`:'';
+  const div=document.createElement('div');div.className='msg bot';
+  div.innerHTML=`<div class="msg-ava">⚡</div><div><div class="msg-bubble">${fmt(text)}${rBadge}</div><div class="msg-meta">${now12()} · ZAP Bot</div></div>`;
+  w.appendChild(div);w.scrollTop=w.scrollHeight;
+}
+function addUser(text){
+  const w=document.getElementById('chat-msgs');
+  const div=document.createElement('div');div.className='msg user';
+  div.innerHTML=`<div class="msg-ava"><i class="ti ti-user"></i></div><div><div class="msg-bubble">${esc(text)}</div><div class="msg-meta">${now12()}</div></div>`;
+  w.appendChild(div);w.scrollTop=w.scrollHeight;
+}
+function showTyping(){
+  const w=document.getElementById('chat-msgs');
+  const d=document.createElement('div');d.className='msg bot';d.id='typing-msg';
+  d.innerHTML=`<div class="msg-ava">⚡</div><div class="msg-bubble"><div class="typing-dots"><div class="tdot"></div><div class="tdot"></div><div class="tdot"></div></div></div>`;
+  w.appendChild(d);w.scrollTop=w.scrollHeight;
+}
+function rmTyping(){document.getElementById('typing-msg')?.remove();}
+
+function send(){
+  const el=document.getElementById('chat-in');const txt=el.value.trim();
+  if(!txt) return;
+  el.value='';ar(el);
+  addUser(txt);
+  document.getElementById('send-btn').disabled=true;
+  showTyping();
+  setTimeout(()=>{
+    rmTyping();
+    const {t,r}=zapBot(txt);
+    addBot(t,r);
+    document.getElementById('send-btn').disabled=false;
+    updateMeter();
+  },280+Math.random()*240);
+}
+function clrChat(){document.getElementById('chat-msgs').innerHTML='';initChat();}
+function qa(q){document.getElementById('chat-in').value=q;send();}
+function ck(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}}
+function ar(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,110)+'px';}
+
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+/* Split text into HTML-safe and raw-HTML parts using a placeholder approach */
+function fmt(text){
+  // 1. Extract raw HTML blocks (data-table, msg-badge) — store them safely
+  const chunks=[];
+  const safe=text.replace(/<(div|span|i|ul|li|strong|em|br)[^>]*>[\s\S]*?(?=<div class="data-row"|<div class="msg-badge"|$)|<div class="data-table">[\s\S]*?<\/div><\/div>|<div class="msg-badge">[\s\S]*?<\/div>/g,m=>{
+    const idx=chunks.length;chunks.push(m);return`\x00${idx}\x00`;
+  });
+  // 2. Escape remaining text and apply markdown
+  let t=esc(safe)
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g,'<em>$1</em>');
+  // Fix list: collect consecutive - lines into one <ul>
+  t=t.replace(/(?:^|\n)((?:- .+\n?)+)/gm,(_,block)=>{
+    const items=block.trim().split('\n').filter(Boolean).map(l=>`<li>${l.replace(/^- /,'')}</li>`).join('');
+    return `<ul>${items}</ul>`;
+  });
+  t=t.replace(/\n\n/g,'<br><br>').replace(/\n/g,'<br>');
+  // 3. Restore raw HTML blocks
+  t=t.replace(/\x00(\d+)\x00/g,(_,i)=>chunks[parseInt(i)]||'');
+  return t;
+}
+
+/* ════ INIT ════ */
+const now=new Date();
+document.getElementById('mm').value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+drawDash();
+</script>
+</body>
+</html>
